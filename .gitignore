@@ -1,0 +1,8 @@
+build/
+config.json
+data/
+invoices/
+
+__pycache__/
+.direnv/
+result
