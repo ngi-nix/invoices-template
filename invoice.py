@@ -51,7 +51,9 @@ def get_config(cli_rate=None, cli_project=None):
     return rate, project
 
 
-def create_invoice(input_file, cli_rate=None, cli_title=None, cli_project=None):
+def create_invoice(
+    input_file, cli_rate=None, cli_title=None, cli_project=None, cli_combined=False
+):
     os.makedirs("build", exist_ok=True)
     os.makedirs("data", exist_ok=True)
     os.makedirs("invoices", exist_ok=True)
@@ -161,9 +163,37 @@ def create_invoice(input_file, cli_rate=None, cli_title=None, cli_project=None):
     print(f"Successfully processed {input_file} into {invoice_filename}")
     print("Created build/invoice_meta.json")
 
-    pdf_out = f"invoices/{invoice_title}.pdf"
-    print(f"Compiling PDF invoice to {pdf_out} ...")
-    subprocess.run(["typst", "compile", "invoice.typ", pdf_out])
+    if cli_combined:
+        pdf_out = f"invoices/{invoice_title}.pdf"
+        print(f"Compiling PDF combined invoice to {pdf_out} ...")
+        subprocess.run(["typst", "compile", "invoice.typ", pdf_out])
+    else:
+        pdf_invoice = f"invoices/{invoice_title}-invoice.pdf"
+        print(f"Compiling PDF short invoice to {pdf_invoice} ...")
+        subprocess.run(
+            [
+                "typst",
+                "compile",
+                "--input",
+                "doc_type=invoice",
+                "invoice.typ",
+                pdf_invoice,
+            ]
+        )
+
+        pdf_timesheet = f"invoices/{invoice_title}-timesheet-full.pdf"
+        print(f"Compiling PDF timesheet to {pdf_timesheet} ...")
+        subprocess.run(
+            [
+                "typst",
+                "compile",
+                "--input",
+                "doc_type=timesheet",
+                "invoice.typ",
+                pdf_timesheet,
+            ]
+        )
+
     print("Done!")
 
 
@@ -188,9 +218,14 @@ def main():
         "--project",
         help="Custom project name (e.g., 'Summer of Nix')",
     )
+    parser.add_argument(
+        "--combined",
+        action="store_true",
+        help="Generate a single combined invoice and timesheet PDF instead of splitting them",
+    )
 
     args = parser.parse_args()
-    create_invoice(args.file, args.rate, args.title, args.project)
+    create_invoice(args.file, args.rate, args.title, args.project, args.combined)
 
 
 if __name__ == "__main__":

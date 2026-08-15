@@ -1,3 +1,4 @@
+#let doc_type = sys.inputs.at("doc_type", default: "combined")
 #set page(paper: "a4", margin: (x: 0.6cm, y: 1.5cm), numbering: "1", number-align: right)
 #set text(font: "Roboto", size: 10pt)
 
@@ -54,7 +55,8 @@
 #v(1cm)
 
 #let meta = json("build/invoice_meta.json")
-#set document(title: meta.invoice_title, author: "[Contributor Name]", date: none)
+#let doc_title = if doc_type == "timesheet" { "Timesheet - " + meta.invoice_title } else { meta.invoice_title }
+#set document(title: doc_title, author: "[Contributor Name]", date: none)
 // Right-align Invoice Date to Payment Method
 #align(right)[
   #grid(
@@ -123,12 +125,22 @@
       #hdr
     ]
   }),
-  ..rows.flatten().enumerate().map(p => {
-    let (i, cell) = p
-    let col = calc.rem(i, 5)
-    if col == 1 { format_num(float(cell)) }
-    else if col == 3 or col == 4 { format_euro(float(cell)) }
-    else { cell }
-  }),
+  ..if doc_type == "invoice" {
+    (
+      [Services Rendered for #meta.period],
+      [#format_num(total_hours)],
+      [#meta.invoice_date],
+      [#if total_hours > 0 { format_euro(total_cost / total_hours) } else { "" }],
+      [#format_euro(total_cost)]
+    )
+  } else {
+    rows.flatten().enumerate().map(p => {
+      let (i, cell) = p
+      let col = calc.rem(i, 5)
+      if col == 1 { format_num(float(cell)) }
+      else if col == 3 or col == 4 { format_euro(float(cell)) }
+      else { cell }
+    })
+  },
   align(right)[*TOTAL*], [*#total_hours_formatted*], meta.invoice_date, [], [*#total_formatted*]
 )
